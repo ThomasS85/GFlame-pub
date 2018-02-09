@@ -1,0 +1,25 @@
+Prepare a job script like this:
+
+----------------------------------------
+#!/bin/sh
+#
+#These commands set up the Grid Environment for your job:
+#PBS -o <MYPATH>
+#PBS -j oe
+#PBS -N JobName
+#PBS -q batch
+#PBS -l nodes=1:ppn=1:buddies
+#PBS -M myEmail
+#PBS -m ae
+
+# Source the softwares of the department
+source /nfs/etc/bashrc
+
+cd <MYPATH>
+matlab -nodesktop -nosplash  -nodisplay -r "disp(pwd); run( [pwd,'/main.m'] ); exit;" &> logML
+----------------------------------------
+
+- Make sure plotting is turned off!
+- Make shure GFLAME is available in the specified path (->main) and this path can be reached from the cluser pcs
+- make shure the specified directories can be reached from the cluster pcs
+- Is velocity data available (if an external Case is loaded)?

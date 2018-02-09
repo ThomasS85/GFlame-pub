@@ -1,0 +1,14 @@
+- Use low resolution and medium accuracy for prototyping
+- Reinitialisation strongly affects noise in surface area data -> Best set s.reinit.intervalStep to 1
+- It is better to reinitialize more often than to increase accuracy
+- if the accuracy for the reinitialisation is set to high or very high results become more noisy (at least with axial flame holder)
+  and the simulation gets slower
+- it is better to invest more in spatial accuracy than in higher order temporal schemes (also because they cause some troubles
+  at the boundaries)
+- With s.holdFlame = 'axial' and high accuracy there has been a problem at the boundaries where some weired things happend. 
+    Maybe radial flame holder is better, at least with high accuracy?
+- Initial condition should be a signed distance function (at least close to boundaries) so that the boundaries are always signed      
+   distancefunctions
+- Always rename example settings files! (Otherwise they might be used instead of local ones!)
+
+
