@@ -4,6 +4,8 @@ function [ D_CH4_air ] = diffusivityMethanAir( T )
 % From https://chrisbharding.wordpress.com/tag/chapman-and-enskog/   (search for methane)
 % And http://www.chemie.de/lexikon/Diffusionskoeffizient.html
 %
+% required for getMarksteinLength()
+%
 % ////////////////////////////////////////////////////////
 % // Thomas Steinbacher (steinbacher@tfd.mw.tum.de).    //
 % // Created, 01.04.2016 as part of GFLAME 0.1          //

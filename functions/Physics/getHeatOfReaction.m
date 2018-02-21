@@ -24,6 +24,10 @@ if strcmpi(mixture,'MethaneAir')
   
   delta_h_R = a * min(1,Phi) ./ ( 1 + b*Phi );
   
+elseif strcmpi(mixture,'myMixture')
+  % Insert computation of delta_h_R for you mixture here
+  delta_h_R = nan;
+  
 else
   error('Heat of reaction calculation for chosen mixture not implemented!')
 end

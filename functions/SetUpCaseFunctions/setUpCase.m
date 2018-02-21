@@ -45,6 +45,12 @@ if nargin > 3
 end
 % Respect flame lift-off
 solver.x1Lim = solver.x1Lim + p.liftOff;
+% If curvature is turned on, always use heatRelease instead of area for outputY, since otherwise curvature
+% dependency of heat release is not captured correctly!
+if solver.curvature == 1 && strcmpi(solver.outputY,'area')
+  warning(['Curvature dependency is switched on, but outputY is <area>. ',...
+    'Consider to change this to <heatRelease> since for curvature dependent flame speed, the flame surface area is not proportional to the integral heat release!'])
+end
 
 % Check if discretisation is too small
 if max(p.R_i / solver.dxi, p.H_flame / solver.dxi) > 1e3

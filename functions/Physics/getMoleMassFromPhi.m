@@ -1,4 +1,4 @@
-function [ M_sum , rho_sum , x , y ] = getMoleMassFromPhi( mixture , Phi )
+function [ M_sum , rho_sum , x , y ] = getMoleMassFromPhi( mixture , Phi , varargin )
 %GETMOLEFRACTIONFROMPHI Calculates the mole fractions x_i=n_i/n_sum or the mass fractions y_i = m_i/m_sum
 % for a given equivalence ratio Phi for methan mixed with air which consists of 21% O_2 and 79% N
 %
@@ -12,20 +12,40 @@ function [ M_sum , rho_sum , x , y ] = getMoleMassFromPhi( mixture , Phi )
 %   x       : mole fractions
 %   y       : mass fractions
 %
-% Global reaction (only with oxygen): CH4 + 2 * O2 -> C02 + 2 * H20
+% Global reaction for MethaneAir mixture:
+%         (only with oxygen): CH4 + 2 * O2 -> C02 + 2 * H20
 %
-% by Thomas Steinbacher (copyed from TFDtools: getMoleMassFractionsFromPhi() )
+% by Thomas Steinbacher 2017
 
 
+%% Parse varargin
+% Adjust reference temperature (for computation density)
+ind = find(strcmpi(varargin,'T_ref'),1);
+if ~isempty(ind)
+  % User input
+  T_ref = varargin{ind+1};
+else
+  % Default: 293
+  T_ref = 293; % [K]
+end
 
-%% Settings
-% Reference values (for determining density)
-p_ref = 101325; %[Pa]
-T_ref = 293; % [K]
+% Adjust reference pressure (for computation density)
+ind = find(strcmpi(varargin,'p_ref'),1);
+if ~isempty(ind)
+  % User input
+  p_ref = varargin{ind+1};
+else
+  % Default: 293
+  p_ref = 101325; %[Pa]
+end
+
+
+%% Parameters
 % Universal gas constant
 R_m = 8.3144598; %[J/mol/K]
 % Precision
 prec1 = 8;
+
 
 %% Calculate mass and mole fractions
 % Definition air
@@ -62,40 +82,45 @@ if strcmpi(mixture,'MethaneAir')
   y_O2 = M_O2 ./ M_sum .* x_O2;
   y_N2 =  M_N2 ./ M_sum .* x_N2;
   
-  
-  
   % Compute density
   rho_sum = p_ref * M_sum*1e-3 / ( R_m*T_ref );
   
-  % Compute cv
+  % Output
+  % mass fractions
+  y.CH4 = y_CH4;
+  y.N2 = y_N2;
+  y.O2 = y_O2;
+  
+  % mole fractions
+  x.CH4 = x_CH4;
+  x.N2 = x_N2;
+  x.O2 = x_O2;
+  
+  % Only display if no output is requested
+  if nargout==0
+    disp(['Phi: ',num2str(Phi,prec1)])
+    disp(['y_CH4: ',num2str(y_CH4,prec1)])
+    disp(['y_O2: ',num2str(y_O2,prec1)])
+    disp(['y_N2: ',num2str(y_N2,prec1)])
+    disp(['x_CH4: ',num2str(x_CH4,prec1)])
+    disp(['x_O2: ',num2str(x_O2,prec1)])
+    disp(['x_N2: ',num2str(x_N2,prec1)])
+    disp(['Resulting Molare Mass: ',num2str(M_sum,prec1),' [g/mol]'])
+    disp(['Resulting Density @ Reference Conditions (Ideal Gas): ',num2str(rho_sum,prec1),' [kg/m^3]'])
+  end
+  
+elseif strcmpi(mixture,'myMixture')
+  % Insert computation of M_sum, rho_sum, x and y for you mixture here  
+  M_sum = nan;
+  rho_sum = nan;
+  x = nan;
+  y = nan;
   
 else
-  error('Flame speed calculation for chosen mixture not implemented!')
+  error('Calculation for chosen mixture not implemented!')
 end
 
-% Output
-% mass fractions
-y.CH4 = y_CH4;
-y.N2 = y_N2;
-y.O2 = y_O2;
 
-% mole fractions
-x.CH4 = x_CH4;
-x.N2 = x_N2;
-x.O2 = x_O2;
-
-% Only display if no output is requested
-if nargout==0
-  disp(['Phi: ',num2str(Phi,prec1)])
-  disp(['y_CH4: ',num2str(y_CH4,prec1)])
-  disp(['y_O2: ',num2str(y_O2,prec1)])
-  disp(['y_N2: ',num2str(y_N2,prec1)])
-  disp(['x_CH4: ',num2str(x_CH4,prec1)])
-  disp(['x_O2: ',num2str(x_O2,prec1)])
-  disp(['x_N2: ',num2str(x_N2,prec1)])
-  disp(['Resulting Molare Mass: ',num2str(M_sum,prec1),' [g/mol]'])
-  disp(['Resulting Density @ Reference Conditions (Ideal Gas): ',num2str(rho_sum,prec1),' [kg/m^3]'])
-end
 
 %% Debug
 % if length(Phi) == 1

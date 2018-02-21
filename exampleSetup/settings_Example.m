@@ -19,6 +19,8 @@ p.caseFolder = '.';
 
 %% Unburnt Mixture
 % Mixture: MethaneAir
+%     if another mixture is desired, define it in all functions stored at functions/Physics, e.g.
+%      getLaminarFlameSpeed() -> see example mixture 'myMixture'!
 p.mixture = 'MethaneAir';
 % Mean equivallence ratio
 p.Phi_m = 0.8;

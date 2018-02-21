@@ -37,6 +37,10 @@ if strcmpi(mixture,'MethaneAir')
   alpha_p = interp1( [0.8 1 1.2] , [-0.504 -0.374 -0.438] , Phi , 'linear','extrap');
   % Now compute flame speed
   s_l_u = s_l_u .* ( T_in / 300 ).^alpha_T .* ( p_in / 101325 ).^alpha_p;
+
+elseif strcmpi(mixture,'myMixture')
+  % Insert computation of s_l_u for you mixture here
+  s_l_u = nan;
   
 else
   error('Flame speed calculation for chosen mixture not implemented!')

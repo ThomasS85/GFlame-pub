@@ -50,6 +50,11 @@ if strcmpi(mixture,'MethaneAir')
   % Compute Markstein length
   marksteinLength = Ma * delta_f;
   
+  
+elseif strcmpi(mixture,'myMixture')
+  % Insert computation of marksteinLength for you mixture here  
+  marksteinLength = nan;
+  
 else
   error('Markstein calculation for chosen mixture not implemented!')
 end
