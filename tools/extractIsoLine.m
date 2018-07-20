@@ -50,7 +50,8 @@ for tt = 1:length(t_load)
   end
   
   %% Extract iso line
-  [C,~] = contour(GFcase.grid.xs{1}, GFcase.grid.xs{2}, data, [level,level]);
+%   [C,~] = contour(GFcase.grid.xs{1}, GFcase.grid.xs{2}, data, [level,level]);
+  [C,~] = contourc(GFcase.grid.vs{1}, GFcase.grid.vs{2}, data', [level,level]);
   hold on;
   
   %% Check if multiple iso lines were returned and return only the longest one

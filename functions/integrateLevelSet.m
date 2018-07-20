@@ -67,7 +67,7 @@ if solver.doPlot
   
   % Pcolor or quiver plot?
   if solver.plotVelPcolor || solver.plotVelQuiver
-    visualizeVelocityField( solver , solverSetup , myGrid );
+    visualizeVelocityField( solver , solverSetup , myGrid , data );
   end
   
   % Plot level set (always)
@@ -144,7 +144,7 @@ while (solver.tMax - tNow > solver.small * solver.tMax)
     % Pcolor or quiver plot?
     if solver.plotVelPcolor || solver.plotVelQuiver
       cla( get(f,'CurrentAxes') )
-      visualizeVelocityField( solver , solverSetup , myGrid );
+      visualizeVelocityField( solver , solverSetup , myGrid , data );
     end
      
     % Create new visualization.

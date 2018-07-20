@@ -1,4 +1,4 @@
-function h = visualizeVelocityField( solver , solverSetup , myGrid , varargin )
+function h = visualizeVelocityField( solver , solverSetup , myGrid , data , varargin )
 %VISUALIZEVELOCITYFIELD Does a pcolor and quiver plot of the velocity field
 %   
 % Inputs: 
@@ -166,7 +166,7 @@ switch myOMag
     myScaleFac = 1;
 end
 % Define ticks x1 and x2 axis
-nTicks = 5;
+nTicks = 3;
 myTicksX =  unique( round( linspace(0,max(myGrid.vs{1}),nTicks)*100*myScaleFac ) / 100/myScaleFac );
 myTicksY =  unique( round( linspace(min(myGrid.vs{2}),max(myGrid.vs{2}),nTicks)*100*myScaleFac ) / 100/myScaleFac );
 % Define labels x1 and x2 axis
@@ -192,9 +192,17 @@ if ~strcmpi(tNow,'none')
   end
 end
 
+if solver.lablesOff
+  myXlabel = ''; myYlabel = '';
+  myTicksX = [min(myTicksX) max(myTicksX)]; myTicksY = [min(myTicksY) max(myTicksY)];
+  myTicksXLab = '';myTicksYLab = '';
+  myLableCol = '';
+  myTicks = [];
+end
 
 %% Do plot pcolor
 if doPcolor
+  velocity_plot(data>=0)=nan; % only plot inside fresh region
   h = pcolor(myGrid.xs{1},myGrid.xs{2},velocity_plot);   % Axial Velocity Component
   set(h,'EdgeColor','none');
   shading(gca,'interp')
@@ -205,10 +213,12 @@ if doPcolor
   
   cmap = getCustomColormap(1024,'BuRd');
   colormap(cmap);
-  cb = colorbar('Ticks',myTicks);
-  zlab = get(cb,'ylabel');
-  set(zlab,'String',myLableCol);set(cb,'TickLabelInterpreter','Latex');
-  set( zlab ,'Interpreter', 'Latex' );
+  if ~solver.lablesOff
+    cb = colorbar('Ticks',myTicks);
+    zlab = get(cb,'ylabel');
+    set(zlab,'String',myLableCol);set(cb,'TickLabelInterpreter','Latex');
+    set( zlab ,'Interpreter', 'Latex' );
+  end
   
   % scale axis
   xlabel(myXlabel,'Interpreter', 'Latex');
@@ -220,6 +230,9 @@ if doPcolor
   if ~strcmpi(tNow,'none')
     title([ 't = $', num2str(t_now*myTScaleFac,3),'$~',myTUnit ],'FontSize',32,'Interpreter', 'Latex' );
   end
+  
+  axis off
+  grid off
   
 end
 
@@ -251,7 +264,7 @@ if doPlotBurner>0
     ylim([myTicksY(1) myTicksY(end)+add2YLim])
   end
   % Plot central axis
-  line([myTicksX(1)-add2XLim myTicksX(end)],[0 0],'Color','k','lineWidth',6,'LineStyle','-.')
+%   line([myTicksX(1)-add2XLim myTicksX(end)],[0 0],'Color','k','lineWidth',2,'LineStyle','-.')
   % Plot burner
   line([myTicksX(1)-add2XLim myTicksX(1)],[p.R_i p.R_i],'Color','k','lineWidth',6,'LineStyle','-')
   if doConfinement
