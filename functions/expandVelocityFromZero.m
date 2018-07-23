@@ -1,6 +1,8 @@
 function [ val_expanded ] = expandVelocityFromZero( cFuns , valC , grid , data )
-%EXPANDVELOCITYFROMZERO Extends velocity at level-set zero line to the grid such that signed distance property
-% is maintained by computing convection
+%EXPANDVELOCITYFROMZERO Extends scalar at level-set zero line to the grid in normal direction of zero iso-ine
+%   If velocity field shall be expanded off the zero iso-line, in order to maintain signed distance property
+%   of G-field, this can either done by expanding the individual velocity components (u_1,u_2) separately or
+%   by expanding the absolute value of the flame normal velocity at the zero iso-line! 
 %
 % Inputs:
 %   cFuns - Iso-lines as, e.g., provided by extracIsoLines_SA()

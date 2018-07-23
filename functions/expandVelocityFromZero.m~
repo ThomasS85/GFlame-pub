@@ -1,10 +1,13 @@
 function [ val_expanded ] = expandVelocityFromZero( cFuns , valC , grid , data )
-%EXPANDVELOCITYFROMZERO Extends velocity at level-set zero line to the grid such that signed distance property
-% is maintained by computing convection
+%EXPANDVELOCITYFROMZERO Extends scalar at level-set zero line to the grid in normal direction of zero iso
 %
 % Inputs:
 %   cFuns - Iso-lines as, e.g., provided by extracIsoLines_SA()
-%   valC  - Values of the scalar to be extended off the zero iso line
+%            { iso-line 1 , iso-line 2 , ... }
+%   valC  - cell array, with each cell contains values of the scalar to be extended off the zero iso line
+%            { scalar 1 over iso-line 1 , scalar 1 over iso-line 2 , ... ; 
+%              scalar 2 over iso-line 1 , scalar 2 over iso-line 2 , ... ;
+%              ... }
 %   grid  - grid struct
 %   data  - Implicit surface function
 %
@@ -12,8 +15,13 @@ function [ val_expanded ] = expandVelocityFromZero( cFuns , valC , grid , data )
 %   val_expanded  - scalar field that was expanded from the zero iso-line
 %
 % by Thomas Steinbacher, Jul 2018
-%   ToDo :  - deal with more than one iso-line
 %
+
+%% Pre-process data
+% Number of iso -lines
+nIso = length(cFuns);
+% Number of scalar fields
+nScal = length(valC(:,1));
 
 %% Initialize close points
 % Find points that are close to zero iso-line
@@ -26,38 +34,55 @@ closePoints(:,2) = grid.xs{2}(closePoints_bool); % x2
 signData_CP = sign(data(closePoints_bool));
 
 % Iterate over all iso-lines to compute initial scalar field val_init
-val_init = zeros(size(data));
-for ii=1:length(cFuns)
+val_init = cell(nScal,1);
+for ii=1:nIso
   % Compute for all close points shortest distance to curve C + the corresponding closest point on C
   cPoints = cFuns{ii}';
-  [closeP_onC,dist2C,ta] = distance2curve(cPoints,closePoints,'linear');
+  [~,dist2C,ta] = distance2curve(cPoints,closePoints,'linear');
   
   % Only take points close to the ii-th curve
   isClose_tmp = dist2C<max(grid.dx);
-   
+  
   % Define coordinate along flame front
-  myDs = sqrt(sum(diff(cPoints,[],1).^2,2));
-  myDs = [0; myDs]; % add starting point
+  myDs = [ 0 ; sqrt(sum(diff(cPoints,[],1).^2,2)) ];
   myS = cumsum(myDs);
   [ myS , ia ] = unique( myS/myS(end) ); % normalize + ensure uniquess
   
-  % Interpolate valC to closeP_onC
-  valC_closeP = interp1(myS,valC{ii}(ia),ta(isClose_tmp));
+  % What to add in order to extend scalar fields at slope 1
+  add2CP = dist2C(isClose_tmp) .* signData_CP(isClose_tmp);
   
-  % Extend scalar to close points + compute initial val field
-  val_CP = valC_closeP + dist2C(isClose_tmp) .* signData_CP(isClose_tmp);
-  closePoints_bool
-  val_init(closePoints_bool) = val_CP;
+  % Loop over all provided scalars
+  for jj=1:nScal
+    % Interpolate valC to closeP_onC
+    valC_closeP = interp1(myS,valC{jj,ii}(ia),ta(isClose_tmp));
+    
+    % Extend scalar to close points + compute initial val field
+    val_CP = valC_closeP + add2CP;
+    
+    % Loop over all points -> inefficient! replace!?
+    closP_tmp = closePoints_bool(:);
+    count = 1;
+    for kk=1:length(closP_tmp)
+      if closP_tmp(kk)
+        closP_tmp(kk) = isClose_tmp(count);
+        count = count + 1;
+      end
+    end
+    closP_tmp = reshape(closP_tmp,size(data));
+    
+    val_init{jj} = zeros(size(data));
+    val_init{jj}(closP_tmp) = val_CP;
+    
+  end
   
-  
-  % flame shape + closest points on flame
-  figure;hold on; plot(cPoints(:,1),cPoints(:,2),'b.'); plot(closeP_onC(:,1),closeP_onC(:,2),'ro')
-  % valC along flameshape and for closest points
-  figure;hold on;
-  plot3(cPoints(:,1),cPoints(:,2),valC{ii},'b.');
-  plot3(closeP_onC(isClose_tmp,1),closeP_onC(isClose_tmp,2),valC_closeP,'ro')
-  xlabel('x1');ylabel('x2')
-  zlabel('scalar')
+  %   % flame shape + closest points on flame
+  %   figure;hold on; plot(cPoints(:,1),cPoints(:,2),'b.'); plot(closeP_onC(:,1),closeP_onC(:,2),'ro')
+  %   % valC along flameshape and for closest points
+  %   figure;hold on;
+  %   plot3(cPoints(:,1),cPoints(:,2),valC{ii},'b.');
+  %   plot3(closeP_onC(isClose_tmp,1),closeP_onC(isClose_tmp,2),valC_closeP,'ro')
+  %   xlabel('x1');ylabel('x2')
+  %   zlabel('scalar')
   
 end
 
@@ -113,39 +138,42 @@ integratorOptions = odeCFLset('factorCFL', 0.95, 'stats', 'off');
 schemeData.derivFunc = @upwindFirstFirst;
 integratorFunc = @odeCFL1;
 
-% Choose time interval
-tSpan = [ 0 max(grid.max - grid.min) ];
+% Choose time interval: THIS SETTING AFFECTS COMPUTATIONAL EFFORT MOST 
+%   -> If t_max set to 1/2 of max(grid.max - grid.min) this reduces computational costs by factor ~2!
+tSpan = [ 0 max(grid.max - grid.min) / 2 ];
 
 % Solve
-[ ~ , val_expanded ] = feval(integratorFunc, schemeFunc, tSpan, val_init(:),...
-  integratorOptions, schemeData);
-
-val_expanded = reshape(val_expanded,size(data));
-
+val_expanded = cell(nScal,1);
+for jj=1:nScal
+  [ ~ , val_expanded{jj} ] = feval(integratorFunc, schemeFunc, tSpan, val_init{jj}(:),...
+    integratorOptions, schemeData);
+  
+  val_expanded{jj} = reshape(val_expanded{jj},size(data));
+end
 
 %% Debug plots
 
-% plot gradient magnitude field of data
-figure;
-surf(grid.xs{1},grid.xs{2},magnitude)
-xlabel('x1');ylabel('x2')
-zlabel('magnitude')
-% plot gradient field of data
-figure;
-surf(grid.xs{1},grid.xs{2},effectiveVelocity{1})
-xlabel('x1');ylabel('x2')
-zlabel('eff. Vel. x1')
-figure;
-surf(grid.xs{1},grid.xs{2},effectiveVelocity{2})
-xlabel('x1');ylabel('x2')
-zlabel('eff. Vel. x2')
-figure
-myVelNorm = sqrt(effectiveVelocity{1}.^2 + effectiveVelocity{2}.^2);
-surf(grid.xs{1},grid.xs{2},myVelNorm)
-xlabel('x1');ylabel('x2')
-zlabel('||eff. Vel||_2')
-
-a = 0;
+% % plot gradient magnitude field of data
+% figure;
+% surf(grid.xs{1},grid.xs{2},magnitude)
+% xlabel('x1');ylabel('x2')
+% zlabel('magnitude')
+% % plot gradient field of data
+% figure;
+% surf(grid.xs{1},grid.xs{2},effectiveVelocity{1})
+% xlabel('x1');ylabel('x2')
+% zlabel('eff. Vel. x1')
+% figure;
+% surf(grid.xs{1},grid.xs{2},effectiveVelocity{2})
+% xlabel('x1');ylabel('x2')
+% zlabel('eff. Vel. x2')
+% figure
+% myVelNorm = sqrt(effectiveVelocity{1}.^2 + effectiveVelocity{2}.^2);
+% surf(grid.xs{1},grid.xs{2},myVelNorm)
+% xlabel('x1');ylabel('x2')
+% zlabel('||eff. Vel||_2')
+% 
+% a = 0;
 
 end
 
