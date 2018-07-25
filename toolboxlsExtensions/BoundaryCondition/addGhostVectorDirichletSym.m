@@ -51,6 +51,10 @@ function dataOut = addGhostVectorDirichletSym(dataIn, dim, width, ghostData)
 % // Thomas Steinbacher (steinbacher@tfd.mw.tum.de).    //
 % // Created, 01.12.2014 as part of GFLAME 0.1          //
 % ////////////////////////////////////////////////////////
+%
+% Jul 2018: Instead of extrapolating for ghost cells at Dirichlet side, just copy the boundary vector
+%           -> This would correspond to a fixed Neumann BC
+%
 
 
 %% parse input
@@ -149,10 +153,10 @@ if strcmp(symmetryPlane,'upper')
   end
   
   
-  % (a) lower: Fixed value (Dirichlet) + Extrapolation
+  % (a) lower: Fixed value (Dirichlet) + Extrapolation/ NOW NEUMANN!
   % compute slopes
-  indicesIn{dim} = 1;
-  slopeBot = lowerVector - dataIn(indicesIn{:});
+%   indicesIn{dim} = 1;
+%   slopeBot = lowerVector - dataIn(indicesIn{:});
   % adjust slope sign to correspond with sign of data at array edge
   % slopeBot = slopeMultiplier * abs(slopeBot) .* sign(dataIn(indicesIn{:}));
   % Set first values to dirichlet vector
@@ -161,10 +165,9 @@ if strcmp(symmetryPlane,'upper')
   % now extrapolate
   for i = 1 : width-1
     indicesOut{dim} = i;
-    dataOut(indicesOut{:}) = (lowerVector + (width - i + 1) * slopeBot);
+%     dataOut(indicesOut{:}) = (lowerVector + ( width - i ) * slopeBot);
+    dataOut(indicesOut{:}) = lowerVector; % no extrapolation, but just copy Dirichlet BC (=fixed Neumann!)
   end
-  
-  
   
   % (b) upper: Neumann (extrapolate)
   for i = 1 : width
@@ -194,10 +197,10 @@ else
     dataOut(indicesOut{:}) = (dataIn(indicesIn{:}));
   end
   
-  % (b) upper: Fixed value (Dirichlet) + Extrapolation
+  % (b) upper: Fixed value (Dirichlet) + Extrapolation/ NOW NEUMANN!
   % compute slopes
-  indicesOut{dim} = sizeIn(dim);
-  slopeTop = upperVector - dataIn(indicesOut{:});
+%   indicesIn{dim} = sizeIn(dim);
+%   slopeTop = upperVector - dataIn(indicesIn{:});
   % adjust slope sign to correspond with sign of data at array edge
   % indicesIn{dim} = sizeIn(dim);
   % slopeTop = slopeMultiplier * abs(slopeTop) .* sign(dataIn(indicesIn{:}));
@@ -205,9 +208,10 @@ else
   indicesOut{dim} = sizeIn(dim) + width + 1;
   dataOut(indicesOut{:}) = upperVector;
   % now extrapolate
-  for i = 1 : width - 1
-    indicesOut{dim} = sizeOut(dim) - i + 1;
-    dataOut(indicesOut{:}) = (upperVector + (width - i + 1) * slopeTop);
+  for i = 2 : width
+    indicesOut{dim} = sizeIn(dim) + width + i;
+%     dataOut(indicesOut{:}) = (upperVector + ( i - 1 ) * slopeTop);
+    dataOut(indicesOut{:}) = upperVector; % no extrapolation, but just copy Dirichlet BC (=fixed Neumann!)
   end
   
 end

@@ -77,7 +77,7 @@ if strcmpi(p.geom,'Vinv')
         % Use Symmetry BC at center (lower noise for surface evaluation!)
         solver.boundaryCon{2} = @addGhostExtrapolateSym;  % x2-directionelse
       else
-        % Do not use symmetry at center since no curvature!
+        % Do not use symmetry at center since no curvature and hence slope not zero!
         solver.boundaryCon{2} = @addGhostExtrapolate; % x2-direction
       end
       

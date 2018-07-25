@@ -109,7 +109,7 @@ if strcmp(solver.initial,'default')
     disp('Initialising G-field as signed distance function...')
     % Set temporalily extrapolation boundary conditions (otherwise the default periodic BC might lead to bad
     % results of reinitialisation close to boundaries!)
-    myGrid.bdry{1,1} = val_expanded;
+    myGrid.bdry{1,1} = @addGhostExtrapolate;
     myGrid.bdry{2,1} = @addGhostExtrapolate;
     
     % Perform reinitialisation (improves quality of boundary condition)

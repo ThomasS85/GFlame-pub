@@ -122,6 +122,7 @@ s.plotVelQuiver = 1;               % Do Velocity quiver plot?
 s.quiverOptions = [ 5 , 2 , 0.3 ]; % [dPlotX1,dPlotX2,scale]
 s.plotGrid = 0;                    % Do plot of grid?
 s.doPlotBurner = 2;                % Should burner be plotted? Set to 2 if also confinement should be included
+s.lablesOff = 1;                   % Plots no lables 
 
 % Should data be written to disc (same intervall as plotting?)
 s.doWriteData = 0;

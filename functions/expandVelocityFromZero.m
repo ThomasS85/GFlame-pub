@@ -12,7 +12,8 @@ function [ val_expanded ] = expandVelocityFromZero( cFuns , valC , grid , data )
 %              scalar 2 over iso-line 1 , scalar 2 over iso-line 2 , ... ;
 %              ... }
 %   grid  - grid struct
-%   data  - Implicit surface function
+%   data  - Implicit surface function (need not to be signed distance function since information is propagated
+%           by normalized velocity:   sign(G) * grad G / |grad G|
 %
 % Outputs:
 %   val_expanded  - scalar field that was expanded from the zero iso-line
@@ -34,14 +35,14 @@ closePoints(:,1) = grid.xs{1}(closePoints_bool); % x1
 closePoints(:,2) = grid.xs{2}(closePoints_bool); % x2
 
 % sign of data for all close points
-signData_CP = sign(data(closePoints_bool));
+% signData_CP = sign(data(closePoints_bool));
 
-% Iterate over all iso-lines to compute initial scalar field val_init
+% Loop over all iso-lines to compute initial scalar field val_init
 val_init = cell(nScal,1);
 for ii=1:nIso
   % Compute for all close points shortest distance to curve C + the corresponding closest point on C
   cPoints = cFuns{ii}';
-  [~,dist2C,ta] = distance2curve(cPoints,closePoints,'linear');
+  [closeP_onC,dist2C,ta] = distance2curve(cPoints,closePoints,'linear');
   
   % Only take points close to the ii-th curve
   isClose_tmp = dist2C<max(grid.dx);
@@ -52,15 +53,15 @@ for ii=1:nIso
   [ myS , ia ] = unique( myS/myS(end) ); % normalize + ensure uniquess
   
   % What to add in order to extend scalar fields at slope 1
-  add2CP = dist2C(isClose_tmp) .* signData_CP(isClose_tmp);
+  % add2CP = dist2C(isClose_tmp) .* signData_CP(isClose_tmp);
   
   % Loop over all provided scalars
   for jj=1:nScal
     % Interpolate valC to closeP_onC
-    valC_closeP = interp1(myS,valC{jj,ii}(ia),ta(isClose_tmp));
+    val_CP = interp1(myS,valC{jj,ii}(ia),ta(isClose_tmp));
     
     % Extend scalar to close points + compute initial val field
-    val_CP = valC_closeP + add2CP;
+    % val_CP = valC_closeP + add2CP;
     
     % Loop over all points -> inefficient! replace!?
     closP_tmp = closePoints_bool(:);
@@ -76,16 +77,19 @@ for ii=1:nIso
     val_init{jj} = zeros(size(data));
     val_init{jj}(closP_tmp) = val_CP;
     
+%     % Debug plot: valC along flameshape and for closest points
+%     figure;hold on;
+%     plot3(cPoints(:,1),cPoints(:,2),valC{jj,ii},'b.');
+%     plot3(closeP_onC(isClose_tmp,1),closeP_onC(isClose_tmp,2),val_CP,'ro')
+%     xlabel('x1');ylabel('x2')
+%     zlabel('scalar')
+    
   end
   
-  %   % flame shape + closest points on flame
-  %   figure;hold on; plot(cPoints(:,1),cPoints(:,2),'b.'); plot(closeP_onC(:,1),closeP_onC(:,2),'ro')
-  %   % valC along flameshape and for closest points
-  %   figure;hold on;
-  %   plot3(cPoints(:,1),cPoints(:,2),valC{ii},'b.');
-  %   plot3(closeP_onC(isClose_tmp,1),closeP_onC(isClose_tmp,2),valC_closeP,'ro')
-  %   xlabel('x1');ylabel('x2')
-  %   zlabel('scalar')
+%   % Debug plot: flame shape + closest points on flame
+%   figure;hold on; plot(cPoints(:,1),cPoints(:,2),'b.'); plot(closeP_onC(:,1),closeP_onC(:,2),'ro')
+%   legend({'points of 0 iso-line','points that are closest to grid points'})
+  
   
 end
 
@@ -126,6 +130,14 @@ magnitude = sqrt(magnitude);
 % Normalize fields
 effectiveVelocity{1} = effectiveVelocity{1} ./ magnitude;
 effectiveVelocity{2} = effectiveVelocity{2} ./ magnitude;
+
+% % Debug plot: velocity field (should point away from zero level set
+% figure; hold on;
+% contour(grid.vs{1}, grid.vs{2}, data', [0,0])
+% quiver(grid.xs{1}(:),grid.xs{2}(:),effectiveVelocity{1}(:),effectiveVelocity{2}(:))
+
+% Debug computation: check nor of velocity
+% norm_effVel = sqrt( effectiveVelocity{1}.^2 + effectiveVelocity{2}.^2 );
 
 
 %% Now solve PDE to propagate initial velocity field
