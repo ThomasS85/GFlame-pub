@@ -147,6 +147,16 @@ switch flameName
     u_1_bulkFeed = 1;
     u_1_centerIn = 1.07;
     E  = 1996/300;
+  
+  case 'Steinbacher_2D_Cr17'
+    Fdim = '2D';
+    type = 'inverseV';
+    R_i = 5e-3;
+    R_a = 29e-3;
+    s_l_u = 0.278;
+    u_1_bulkFeed = 1;
+    u_1_centerIn = 1;
+    E  = 1996/300;
     
   case 'Steinbacher_3D_V'
     Fdim = '3D';
