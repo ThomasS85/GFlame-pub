@@ -168,10 +168,12 @@ if doKutta
   if dOmega_dxi_xiKutta_sum > 0 
     % Separation downstream
     MyBeta = pi/3;
+%     MyBeta = pi/9;    %Axel
   else
     % Separation upstream
 %     MyBeta = pi*2/3;
     MyBeta = pi/3;
+%     MyBeta = pi/9;
   end
   
   
@@ -199,7 +201,8 @@ if doKutta
     % If field Kutta exists, take length specified here. Otherwise, compute length from l_ref
     if ~isfield(vel.Kutta,'H')
       % Derive H from reference length
-      vel.Kutta.H = abs( myMap.dxi_dx( myMap.xi_x( myMap.x_xi(xiKutta) + myMap.l_ref * 0.6 ) ) ) * myMap.l_ref*0.6;
+%       vel.Kutta.H = abs( myMap.dxi_dx( myMap.xi_x( myMap.x_xi(xiKutta) + myMap.l_ref * 0.6 ) ) ) * myMap.l_ref*0.6;
+      vel.Kutta.H = abs( myMap.dxi_dx( myMap.xi_x( myMap.x_xi(xiKutta) + myMap.l_ref * 0.6 ) ) ) * myMap.l_ref*0.5;   %Axel
     end
     
   end

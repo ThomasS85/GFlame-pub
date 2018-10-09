@@ -33,6 +33,9 @@ if strfind(vel.velModel,'convective')
 elseif strcmp(vel.velModel,'CFD_FOAM')
   vel.logfile = {vel.logfile{:} , 'path2Case','CFDorigin','dSave'};
   
+elseif strfind(vel.velModel,'FirstPrincipleBased')    % Axel
+  vel.logfile = {vel.logfile{:} , 'FPB.source_myA','FPB.source_myR','FPB.shear_layer','FPB.do_proceed','FPB.do_source_curvature'};
+  
 end
 
 % dependent on chosen model:

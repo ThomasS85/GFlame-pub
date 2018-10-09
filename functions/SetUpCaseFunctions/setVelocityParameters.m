@@ -84,7 +84,12 @@ elseif strcmp(vel.velModel ,'SCcomputed')
   % Convective velocity model
   vel.velocity = @velocityFieldSCcomputed;
   vel.K = vel_tmp.K;
-  
+
+elseif strcmp(vel.velModel ,'FirstPrincipleBased')
+    % First principle based velocity model
+    vel.velocity = @velocityFieldFirstPrincipleBased;
+    vel.FPB = vel_tmp.FPB;
+    
 % elseif strcmp(vel.velModel ,'CFD_FOAM')
 %   % Velocity from CFD: FOAM
 %    vel.velocity = @velocityFieldExternal;

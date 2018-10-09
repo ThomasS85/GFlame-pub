@@ -9,7 +9,7 @@ function [ v ] = settings_VelocityModel_Example( p )
 
 %% Basic settings
 % Type?  'convectiveConfined' or 'convective' or 'convectiveIncomp' or 'uniform' or 'uniform_transversal'
-%         or 'convectiveIncompConfined'
+%         or 'convectiveIncompConfined' or 'FirstPrincipleBased'
 v.velModel = 'convective';
 % 'transient' or 'constant'?
 v.type = 'transient';
@@ -35,6 +35,44 @@ v.vAmp = 0.1;
 v.t_transient0 = 0;
 % Definition of Kernel for convective velocity models: Dirac or Diffusion
 v.kernel = 'Dirac';
+
+
+%% Settings for VelocityField 'FirstPrincipleBased'
+% amount of sources on the flame front
+v.FPB.source_amount = 'my_amount';     % high/normal/low/my_amount
+% if my_amount is selected, define here amount
+v.FPB.source_myA = 150;
+% Radius for Desingularized Source
+v.FPB.source_kw = 'my_radius';     %no_radius/small/normal/high/my_radius
+% if 'my radius' is selected, define here radius (in general half the flame thicknes)
+v.FPB.source_myR = 0.0005; 
+
+%should shear layer be computed
+v.FPB.shear_layer = 'no_sl';  %do_sl /no_sl
+
+% amount of sources on the flame front
+v.FPB.vortex_amount = 'my_amount';     % high/normal/low/my_amount
+% if my_amount is selected, define here amount
+v.FPB.vortex_myA = 150;
+% radius for Lamb-Oseen Vortex
+v.FPB.vortex_kw='my_radius';       %no_radius/small/normal/high/my_radius
+% if 'my radius' is selected, define here radius 
+v.FPB.vortex_myR = 0.0001;
+
+% proceed velocity at flamefront in whole domain
+v.FPB.do_proceed = 'y' ; % 'y' --> do proceed ; 'n' --> do not proceed
+%CURVATURE effects accounted in source strength
+v.FPB.do_source_curvature = 'n' ;  % y-> curvature is accounted \\ n-> no curvature
+
+% Plot real velocity field FPB in entire domain
+v.FPB.plot.plot_physical = 'y';   % 'n' --> plot calculated velocity field \\ 'y'--> plot requested velocity field
+
+% when v.FPB.plot.plot_physical = 'y' , then adjust what should be plotted
+v.FPB.plot.plot_mean_flow = 'y';        % 'n' --> plot only source velocity field \\ 'y'--> plot entire velocity field
+v.FPB.plot.plot_acoustics = 'y';        % 'n' --> do not plot acoustiv velocity field \\ 'y'--> plot acoustic velocity field
+v.FPB.plot.plot_source_field = 'y';        % 'n' --> do not plot source velocity field \\ 'y'--> plot source velocity field
+v.FPB.plot.plot_sources_position = 'y';        % 'n' --> do not plot source_position\\ 'y'--> plot source position
+v.FPB.plot.plot_vortex_position = 'n';        % 'n' --> do not plot source_position\\ 'y'--> plot source position
 
 
 %% Kernel Settings

@@ -57,6 +57,29 @@ if max(p.R_i / solver.dxi, p.H_flame / solver.dxi) > 1e3
   error('Discretisation too small! Please use different spatial discretisation s.dxi.)')
 end
 
+
+% (c) Get user parameters for velocity field
+p.run_output_folder = '.';
+vel = eval([Fun4VelSettings,'(p)']);
+if nargin > 3
+  vel = setUserParameters( vel , varargin );
+end
+
+% Verify FirstPrincipleBased velocity model runs correctly
+if strcmp(vel.velModel ,'FirstPrincipleBased')
+  % Set required settings 
+  if strcmpi( p.CombType , 'backwardFacingStep' )
+    solver.holdFlame = 'axial';
+  elseif strcmpi( p.CombType , 'duct' )
+    solver.holdFlame = 'radial';
+    if solver.x1Lim(1)>0 || solver.x1Lim(2)<0
+      error('Duct: Please set x1Lim such that x_1=0 is enclosed (->Solver settings)!')
+    end
+  end
+  % Simulate only half domain (full not supported!)
+  p.domainType = 'sym';
+end
+
 % parse solver settings and set values for BC and limits in x1/2 direction
 if strcmpi(p.geom,'Vinv')
   
@@ -70,7 +93,7 @@ if strcmpi(p.geom,'Vinv')
       solver.boundaryCon{2} = @addGhostVectorDirichletSym; % x2-direction
     elseif strcmp(solver.holdFlame,'axial')
       % Limits in x2 direction
-      solver.x2Lim = [ 0 p.R_flame+p.R_flame*0.1 ];
+      solver.x2Lim = [ 0 p.R_flame+p.R_flame*0.3 ];   %%% Axel (*0.1 auf 0.3 gesetzt)
       % BCs
       solver.boundaryCon{1} = @addGhostVectorDirichlet_Extrapolate; % x1-direction
       if solver.curvature
@@ -287,11 +310,8 @@ end
 
 
 %% Velocity field
-% Get user parameters for velocity field
-vel = eval([Fun4VelSettings,'(p)']);
-if nargin > 3
-  vel = setUserParameters( vel , varargin );
-end
+% Name of file which contains a list of transient behaviour
+vel.path2File = [p.run_output_folder,'/uInlet'];
 
 % Check if chosen velocity model is applicable
 if strcmp(vel.velModel ,'convectiveConfined') || strcmp(vel.velModel ,'convectiveIncompConfined')
@@ -305,6 +325,7 @@ if strcmp(vel.velModel ,'convectiveConfined') || strcmp(vel.velModel ,'convectiv
     warning('Confined velocity model not applicable since confinement ratio too small! Switched to conventional convective velocity model!')
   end
 end
+
 
 % Set parameters velocity field
 vel = setVelocityParameters( vel , solver );

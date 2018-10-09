@@ -239,8 +239,12 @@ end
 
 
 % (7) Initialize velocity field.
-convectiveData.velocityField = feval( convectiveData.velocity , solver.t0 , data , convectiveData );
+[convectiveData.velocityField, schemeData] = feval( convectiveData.velocity , solver.t0 , data , convectiveData ); %Axel (schemeData)
 
+if strcmp(convectiveData.velModel,'FirstPrincipleBased')     %Axel
+  convectiveData.FPB = schemeData.FPB;
+end
+clear schemeData;
 
 
 %% Combine components of motion.

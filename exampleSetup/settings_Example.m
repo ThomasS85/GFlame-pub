@@ -36,7 +36,7 @@ p.nu = 15.82e-6;      % [m^2/s]
 p.s_l_u = -1;  % [m/s]
 
 % Axial flow speed at inlet
-p.u_1_L = 1.12;   % [m/s]
+p.u_1_L = 1.0;   % [m/s]
 
 
 %% Other Parameters Physics 

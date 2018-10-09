@@ -53,8 +53,9 @@ s.accuracy = 'medium';
 
 %% Spatial Discretisation
 % solver.dxi = 2e-4;
-s.dxi = 4e-4;   % Cuquel
+% s.dxi = 4e-4;   % Cuquel
 % s.dxi = 5e-5;   % Kornilov
+s.dxi = 2e-4; %Axel
 
 
 %% Settings reinitialization (G-solver)
@@ -131,8 +132,10 @@ s.doWriteData = 0;
 %% Domain settings and boundary conditions
 % Minima/ Maxima of geometry in x1 direction (for grid generation, plotting,etc) WITHOUT flame lift-off!
 % s.x1Lim = [ 0 1.3*p.H_flame+p.liftOff ];
-s.x1Lim = [ 0 , 40e-3 ];  % Cuquel
+% s.x1Lim = [ 0 , 40e-3 ];  % Cuquel
 % s.x1Lim = [ 0 , 8e-3 ];  % Kornilov
+% s.x1Lim = [ -30e-3 , 30e-3 ]; % Axel duct
+s.x1Lim = [ 0 , 30e-3 ]; % Axel backwardFacingStep
 
 % Boundary Condition in x1 direction:
 %   radial    - Holds the flame at the radial walls. Domain width is

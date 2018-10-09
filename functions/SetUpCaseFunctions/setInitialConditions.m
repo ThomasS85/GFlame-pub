@@ -24,12 +24,18 @@ if strcmp(solver.initial,'default')
     %     offSet = p.H_flame * 0.01;
     %     data = grid.xs{2} - m * ( grid.xs{1} - offSet ) - x2_0;
     
-    % Creates parabula for initial condition. Slope normal to flame front is not signed distance!
-    const = solver.x1Lim(2)*0.5 ;
-    prefactor = -const / solver.x2Lim(2)^2;
-    offSet = p.H_flame * 0.01;
-    data =  myGrid.xs{1}-myRef - prefactor*myGrid.xs{2}.^2 - const - offSet;
-    
+    if strcmpi(p.CombType,'duct')
+      % straight line
+      m = 1;   % G<0 : fresh gas
+      t = 0;  % offset needed to stabilise flame for liftOff=0!
+      data =  m * myGrid.xs{1} + t;
+    else
+      % Creates parabula for initial condition. Slope normal to flame front is not signed distance!
+      const = solver.x1Lim(2)*0.5 ;
+      prefactor = -const / solver.x2Lim(2)^2;
+      offSet = p.H_flame * 0.01;
+      data =  myGrid.xs{1}-myRef - prefactor*myGrid.xs{2}.^2 - const - offSet;
+    end
     
   elseif strcmp(solver.holdFlame,'axial') || (strcmpi(p.geom,'V')||strcmpi(p.geom,'M'))
     if strcmpi(p.geom,'Vinv')

@@ -58,5 +58,14 @@ else
   p.gamma_s = 0;
 end
 
+% Set combustor type (required to find appropriate SC mapping)   %%Axel
+if p.R_i<p.R_a
+  p.CombType = 'backwardFacingStep';
+elseif p.R_i==p.R_a
+  p.CombType = 'duct';
+else
+  p.CombType = 'unknown';
+end
+
 
 end

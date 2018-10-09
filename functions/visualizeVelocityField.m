@@ -1,11 +1,11 @@
 function h = visualizeVelocityField( solver , solverSetup , myGrid , data , varargin )
 %VISUALIZEVELOCITYFIELD Does a pcolor and quiver plot of the velocity field
-%   
-% Inputs: 
+%
+% Inputs:
 %         solver      - GFLAME solver object
 %         solverSetup - GFLAME solver setup struct containing
 %             - schemeData - struct with innerFunc and innerData of termConvection
-%           
+%
 %         grid        - GFLAME grid struct
 %
 % Only for 2D data!
@@ -36,7 +36,7 @@ else
   vComp = 'abs';
 end
 
-% pcolor plot? 
+% pcolor plot?
 ind = find(strcmpi(varargin,'doPcolor'),1);
 if ~isempty(ind)
   % User input
@@ -46,7 +46,7 @@ else
   doPcolor = solver.plotVelPcolor;
 end
 
-% Quiver plot? 
+% Quiver plot?
 ind = find(strcmpi(varargin,'doQuiver'),1);
 if ~isempty(ind)
   % User input
@@ -84,7 +84,7 @@ if ~isempty(ind)
   
 else
   % options for quiver plot from solver
-  quiverOptions = solver.quiverOptions;  
+  quiverOptions = solver.quiverOptions;
 end
 
 % What time is it (for title string)?
@@ -113,6 +113,22 @@ end
 % velocity field
 velocity = solverSetup.schemeData.innerData{indSD}.velocityField;
 
+
+%% Plot different velocity than calculated, if requested
+%when velocityFieldFirstPrincipleBased is chosen, plot the defined parts
+if strcmp(solverSetup.schemeData.innerData{end, 1}.velModel,'FirstPrincipleBased')
+  if strcmp(solverSetup.schemeData.innerData{end, 1}.FPB.plot.plot_physical,'y')
+    [ velocity ] = plot_FPB(solverSetup.schemeData.innerData{end, 1}.FPB,solverSetup.schemeData.innerData{end,1}.p);
+    myGrid = solverSetup.schemeData.innerData{end, 1}.FPB.plot.myGrid;
+  end
+  plot_sourcePosition = solverSetup.schemeData.innerData{end, 1}.FPB.plot.plot_sources_position;
+  plot_vortexPosition = solverSetup.schemeData.innerData{end, 1}.FPB.plot.plot_vortex_position;
+  
+  
+else
+  plot_sourcePosition = 'n';
+  plot_vortexPosition = 'n';
+end
 
 
 %% Prepare velocity data
@@ -202,7 +218,7 @@ end
 
 %% Do plot pcolor
 if doPcolor
-  velocity_plot(data>=0)=nan; % only plot inside fresh region
+  %velocity_plot(data>=0)=nan; % only plot inside fresh region
   h = pcolor(myGrid.xs{1},myGrid.xs{2},velocity_plot);   % Axial Velocity Component
   set(h,'EdgeColor','none');
   shading(gca,'interp')
@@ -243,7 +259,7 @@ if doQuiver
   dPlotX2 = quiverOptions(2);
   scale = quiverOptions(3);
   h = quiver(myGrid.xs{1}(1:dPlotX1:end,1:dPlotX2:end),myGrid.xs{2}(1:dPlotX1:end,1:dPlotX2:end),...
-      velocity{1}(1:dPlotX1:end,1:dPlotX2:end),velocity{2}(1:dPlotX1:end,1:dPlotX2:end) , scale ,'color','k' );
+    velocity{1}(1:dPlotX1:end,1:dPlotX2:end),velocity{2}(1:dPlotX1:end,1:dPlotX2:end) , scale ,'color','k' );
 end
 
 
@@ -264,7 +280,7 @@ if doPlotBurner>0
     ylim([myTicksY(1) myTicksY(end)+add2YLim])
   end
   % Plot central axis
-%   line([myTicksX(1)-add2XLim myTicksX(end)],[0 0],'Color','k','lineWidth',2,'LineStyle','-.')
+  %   line([myTicksX(1)-add2XLim myTicksX(end)],[0 0],'Color','k','lineWidth',2,'LineStyle','-.')
   % Plot burner
   line([myTicksX(1)-add2XLim myTicksX(1)],[p.R_i p.R_i],'Color','k','lineWidth',6,'LineStyle','-')
   if doConfinement
@@ -294,6 +310,16 @@ if doPlotBurner>0
   
 end
 
+%% Plot source position
+if strcmp(plot_sourcePosition,'y')
+  plot(real(solverSetup.schemeData.innerData{end, 1}.FPB.velPar.sourceDat.x ),...
+    imag(solverSetup.schemeData.innerData{end, 1}.FPB.velPar.sourceDat.x  ),'* g');
+end
+% Plot vortex position
+if strcmp(plot_vortexPosition,'y') &&  strcmp(solverSetup.schemeData.innerData{end, 1}.FPB.shear_layer,'do_sl')
+  plot(real(solverSetup.schemeData.innerData{end, 1}.FPB.velPar.vortDat.x ),...
+    imag(solverSetup.schemeData.innerData{end, 1}.FPB.velPar.vortDat.x  ),'* m');
+end
 
 end
 

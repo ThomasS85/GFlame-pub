@@ -53,19 +53,19 @@ if strcmpi(p.CombType,'backwardFacingStep')
   
 elseif strcmpi(p.CombType,'duct')
   % Duct flame
-  %   -> Include reference length here?!
   % Mapping by Brown/ Churchill fig. 6
-  
+  % reference length to calculate real lengths
+  s.l_ref = pi / p.R_i;                        
   % SC-Mapping (normalized coordinates) xi->x
-  s.x_xi = @(xi)log(xi);
+  s.x_xi = @(xi)log(xi)/s.l_ref;
   % SC-Mapping (normalized coordinates) x->xi
-  s.xi_x = @(x)exp(x);
+  s.xi_x = @(x)exp(x*s.l_ref);
   % Derivative of x with respect to xi
-  s.dx_dxi = @(xi) 1/xi;
+  s.dx_dxi = @(xi) 1/(xi*s.l_ref);
   % Derivative of xi with respect to x
-  s.dxi_dx =@(xi) xi;
+  s.dxi_dx =@(xi) xi*s.l_ref;
   % Second derivative of xi with respect to x
-  s.d2xi_dx2 = @(xi) -xi^2;
+  s.d2xi_dx2 = @(xi) s.l_ref^2*xi; %-xi^2;                           
   
   % Routh's correction (xi and Gamma can be vector of same length)
   s.RouthsCorr = @(Gamma,xi)  -1i*Gamma/(4*pi) .* s.d2xi_dx2( xi ) ./ s.dxi_dx( xi );
