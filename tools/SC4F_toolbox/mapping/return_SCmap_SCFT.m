@@ -61,9 +61,9 @@ elseif strcmpi(p.CombType,'duct')
   % SC-Mapping (normalized coordinates) x->xi
   s.xi_x = @(x) exp( x / s.l_ref );
   % Derivative of x with respect to xi
-  s.dx_dxi = @(xi) 1 / ( xi / s.l_ref );
+  s.dx_dxi = @(xi) s.l_ref ./ xi;
   % Derivative of xi with respect to x
-  s.dxi_dx =@(xi) xi / s.l_ref;
+  s.dxi_dx = @(xi) xi / s.l_ref;
   % Second derivative of xi with respect to x
   s.d2xi_dx2 = @(xi) xi / s.l_ref^2; %-xi^2;                           
   
