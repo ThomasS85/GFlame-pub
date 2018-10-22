@@ -37,7 +37,11 @@ function [ x_L1 ] = L2_to_L1( x_L2 , p )
 % // Last modified: 09.11.2017 by steinbacher           //
 % ////////////////////////////////////////////////////////
 
-x_L1 = real(x_L2) + 1i * ( p.R_a - imag(x_L2) );
+if strcmpi(p.CombType,'backwardFacingStep')
+  x_L1 = real(x_L2) + 1i * ( p.R_a - imag(x_L2) );
+else
+  x_L1 = x_L2;
+end
 
 end
 

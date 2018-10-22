@@ -243,11 +243,21 @@ switch flameName
   
   case 'Axel_DuctFlame'
     Fdim = '2D';
-    type = 'inverseV';
+    type = 'flat';
     R_i = 0.1;
     R_a = 0.1;
     s_l_u = 0.278;
-    u_1_bulkFeed = 0.55;
+    u_1_bulkFeed = s_l_u;
+    u_1_centerIn = u_1_bulkFeed;
+    E  = 2000/300;
+  
+  case 'New_DuctFlame'
+    Fdim = '2D';
+    type = 'flat';
+    R_i = 0.5;
+    R_a = 0.5;
+    s_l_u = 0.278;
+    u_1_bulkFeed = s_l_u;
     u_1_centerIn = u_1_bulkFeed;
     E  = 2000/300;
     

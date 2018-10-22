@@ -24,13 +24,23 @@ function [ p ] = setROMParameters( Fdim , type , R_i , R_a , s_l_u , u_1_bulkFee
 % ////////////////////////////////////////////////////////
 
 
+%% Set combustor type (required to find appropriate SC mapping + to parse input)
+if R_i<R_a
+  p.CombType = 'backwardFacingStep';
+elseif R_i==R_a
+  p.CombType = 'duct';
+else
+  p.CombType = 'unknown';
+end
+
+
 %% Parse input
 % Dimension
 if ~ ( strcmp(Fdim,'3D') || strcmp(Fdim,'2D') )
   error('Unknown flame dimension chosen! (Use 2D or 3D!)')
 end
 % Shape
-if ~ (strcmp(type,'inverseV') || strcmp(type,'V'))
+if ~ (strcmp(type,'inverseV') || strcmp(type,'V') || strcmp(type,'flat') )
   error('Unknown flame shape chosen! (Use inverseV or V!)')
 elseif strcmp(type,'V')
   warning('V-shaped flames are not valiadated yet! Be carefull!)')
@@ -51,7 +61,7 @@ end
 if u_1_bulkFeed / s_l_u > 10  
   % Flame angle would be smaller than 5.7 degrees!
   error('Flame angle too small. Such flames are not supported!')
-elseif s_l_u >= u_1_bulkFeed
+elseif s_l_u >= u_1_bulkFeed && ~strcmpi(p.CombType,'duct')
   error('Flame speed has to be smaller than bulk flow velocity in feed channel!')
 end
 
@@ -140,7 +150,11 @@ end
 p.alpha0 = asin( p.s_l_u / u_1_centerIn );
 p.alpha0Degree = p.alpha0 / pi * 180;
 % Flame height
-p.H_flame0 = p.R_flame / ( tan(p.alpha0) );
+if ~strcmp(type,'flat')
+  p.H_flame0 = p.R_flame / ( tan(p.alpha0) );
+else
+  p.H_flame0 = 0;
+end
 % Flame length
 p.L_flame0 = p.R_flame / ( sin(p.alpha0) );
 % Bulk flow velocity
@@ -260,14 +274,8 @@ else
   p.alphaDegree = p.alpha0Degree;
   p.H_flame = p.H_flame0;
   p.L_flame = p.L_flame0;
+  p.u_1_centerIn = p.u_1_centerIn0;
 
 end
 
-% Set combustor type (required to find appropriate SC mapping)
-if p.R_i<R_a
-  p.CombType = 'backwardFacingStep';
-elseif p.R_i==R_a
-  p.CombType = 'duct';
-else
-  p.CombType = 'unknown';
-end
+

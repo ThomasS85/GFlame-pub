@@ -9,7 +9,7 @@ if ~isempty(ind)
   lstyle = varargin{ind+1};
 else
   % Default
-  lstyle = {'-','-.',':','--','-o','-.o',':o','--o','-x'};
+  lstyle = {'--','-.',':','-','-o','-.o',':o','--o','-x'};
 end
 
 % Where should ticz file be exported to? Specify *.tex file!
@@ -53,7 +53,7 @@ if ~isempty(ind)
   linWidthF = varargin{ind+1};
 else
   % Default
-  linWidthF = 0.7;
+  linWidthF = 2;
 end
 
 % Plot full of half geometry?
@@ -93,7 +93,7 @@ if ~isempty(ind)
   facX2 = varargin{ind+1};
 else
   % Default
-  facX2 = 1.2;
+  facX2 = 1.1;
 end
 
 % factor -x1 direction
@@ -104,6 +104,16 @@ if ~isempty(ind)
 else
   % Default
   facmX1 = 0.05;
+end
+
+% provide mean flame coordinates as cell array where each cell contains [x1 x2] coordinates of the flame (L1)
+ind = find(strcmpi(varargin,'myMeanF'),1);
+if ~isempty(ind)
+  % User specified
+  myMeanF = varargin{ind+1};
+else
+  % Default
+  myMeanF = [];
 end
 
 % Get color order
@@ -119,35 +129,56 @@ if isempty(myF)
   myF = figure('Position',[0 50 800 550],'Color','w');hold on;
 end
 
+% axis off
+if ~doSubplot
+  set(gca,'Position',[0 0 1 1])
+  axis off
+  axis equal
+end
+
 % Plot flames
 x1_maxPlot = 0;
 x1_minPlot = 0;
-for ii=1:length(p)
-  plot([0 p{ii}.H_flame],[p{ii}.R_flame,0],'LineStyle',lstyle{ii},'LineWidth',linWidthF,'Color', myColorOrd(ii,:))
-  if doFull
-    plot([0 p{ii}.H_flame],[-p{ii}.R_flame,0],'LineStyle',lstyle{ii},'LineWidth',linWidthF,'Color', myColorOrd(ii,:))
-  end
-  x1_maxPlot = max(p{ii}.H_flame,x1_maxPlot);
-  x1_minPlot = min(p{ii}.H_flame,x1_minPlot);
-  % Add text
-  if noText
-    if strcmpi(texPosMode,'auto')
-      text( 0.8*p{ii}.H_flame-0.1 , 0.2*p{ii}.R_flame , ['$\alpha=',num2str(p{ii}.alphaDegree),'^\circ$'])
-    else
-      text(texPos(ii,1),texPos(ii,2),['$\alpha=',num2str(p{ii}.alphaDegree),'^\circ$'])
+if isempty(myMeanF)
+  % Plot flame according to data in p
+  for ii=1:length(p)
+    plot([0 p{ii}.H_flame],[p{ii}.R_flame,0],'LineStyle',lstyle{ii},'LineWidth',linWidthF,'Color', myColorOrd(ii,:))
+    if doFull
+      plot([0 p{ii}.H_flame],[-p{ii}.R_flame,0],'LineStyle',lstyle{ii},'LineWidth',linWidthF,'Color', myColorOrd(ii,:))
     end
+    x1_maxPlot = max(p{ii}.H_flame,x1_maxPlot);
+    x1_minPlot = min(p{ii}.H_flame,x1_minPlot);
+    % Add text
+    if noText
+      if strcmpi(texPosMode,'auto')
+        text( 0.8*p{ii}.H_flame-0.1 , 0.2*p{ii}.R_flame , ['$\alpha=',num2str(p{ii}.alphaDegree),'^\circ$'])
+      else
+        text(texPos(ii,1),texPos(ii,2),['$\alpha=',num2str(p{ii}.alphaDegree),'^\circ$'])
+      end
+    end
+  end
+else
+  % Plot flame according to provided mean flame positions
+  for ii=1:length(myMeanF)
+    plot(myMeanF{1}(1,:),myMeanF{1}(2,:),'LineStyle',lstyle{ii},'LineWidth',linWidthF,'Color', myColorOrd(ii,:))
+    x1_maxPlot = max(max(myMeanF{1}(1,:)),x1_maxPlot);
+    x1_minPlot = min(min(myMeanF{1}(1,:)),x1_minPlot);
   end
 end
 
+if x1_maxPlot - x1_minPlot < 1e-4
+  x1_minPlot = -1.5*p{1}.R_i;
+  x1_maxPlot =  1.5*p{1}.R_i;
+end
 delta_x1 = x1_maxPlot - x1_minPlot;
 x1_maxPlot = x1_maxPlot+0.1*delta_x1;
 x1_minPlot = x1_minPlot-facmX1*delta_x1;
 
-x2maxPlot = p{1}.R_flame * facX2;
-x2minPlot = -p{1}.R_flame * facX2;
+x2maxPlot = p{1}.R_a * facX2;
+x2minPlot = -p{1}.R_a * facX2;
 
 % Plot center line
-line([x1_minPlot x1_maxPlot],[0,0],'LineStyle','-.','Color','k','LineWidth',1)
+line([x1_minPlot x1_maxPlot],[0,0],'LineStyle','-.','Color','k','LineWidth',2)
 xlim([x1_minPlot x1_maxPlot])
 
 if doFull
@@ -156,26 +187,29 @@ else
   ylim([0,x2maxPlot])
 end
 
-% Plot confinement
+% adjust figure
 currYlims = get(gca,'yLim');
-currXlims = get(gca,'xLim');
-line([currXlims(1) 0],[p{1}.R_i,p{1}.R_i],'Color','k','LineWidth',2)
-if doFull
-  line([currXlims(1) 0],[-p{1}.R_i,-p{1}.R_i],'Color','k','LineWidth',2)
-  line([0 0],[-p{1}.R_i,currYlims(1)],'Color','k','LineWidth',2)
+myRatio = (x1_maxPlot-x1_minPlot) / (currYlims(2)-currYlims(1));
+if strcmpi(p{1}.CombType,'duct')
+  myHeight = 500;
+else
+  myHeight = 900;
 end
-line([0 0],[p{1}.R_i,currYlims(2)],'Color','k','LineWidth',2)
+set(myF,'Position',[0 50 myHeight*myRatio*1.2 myHeight])
+
+% Plot confinement
+currXlims = get(gca,'xLim');
+line([currXlims(1) 0],[p{1}.R_i,p{1}.R_i],'Color','k','LineWidth',4)
+if doFull
+  line([currXlims(1) 0],[-p{1}.R_i,-p{1}.R_i],'Color','k','LineWidth',4)
+  line([0 0],[-p{1}.R_i,p{1}.R_i],'Color','k','LineWidth',4)
+  line([0 currXlims(2)],-[1 1]*p{1}.R_a,'Color','k','LineWidth',4)
+end
+line([0 0],[p{1}.R_i,p{1}.R_a],'Color','k','LineWidth',4)
+line([0 currXlims(2)],[1 1]*p{1}.R_a,'Color','k','LineWidth',4)
 
 % extend center line
-line([currXlims(1) 0],[0,0],'LineStyle','-.','Color','k','LineWidth',1)
-
-% axis off
-if ~doSubplot
-  set(gca,'Position',[0 0 1 1])
-  axis off
-  axis equal
-end
-
+line([currXlims(1) 0],[0,0],'LineStyle','-.','Color','k','LineWidth',2)
 
 
 if doEx2Ticz

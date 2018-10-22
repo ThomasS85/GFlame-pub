@@ -49,10 +49,10 @@ velPar.sourceDat.amount= schemeData.FPB.velPar.sourceDat.amount;
 %source POSITION 
 %%%%%%%%%%%%%%%%%%
 % extract source position
-[ C ] = extract_IsoLine( schemeData.grid, data ,schemeData.FPB.velPar.sourceDat.radius_s);
+[ C ] = extract_IsoLine_FPB( schemeData.grid, data ,schemeData.FPB.velPar.sourceDat.radius_s);
 
 % interpolate position of flame front to equidistant distance
-[velPar.sourceDat.x,~]= interp2Dcurve_2equidistantGrid([C(1,2:end);C(2,2:end)] ,velPar.sourceDat.amount);
+[velPar.sourceDat.x,~]= interp2Dcurve_2equidistantGrid_FPB([C(1,2:end);C(2,2:end)] ,velPar.sourceDat.amount);
 velPar.sourceDat.x = transpose(velPar.sourceDat.x(:,1)+ 1i*velPar.sourceDat.x(:,2));
 
 %complex source coordinates in image domain
@@ -128,8 +128,8 @@ if strcmp(schemeData.FPB.do_proceed,'y')
   % Proceed flame velocity normal to flame front in the domain  
   %%%%%%%%%%%%%%%%%%
   % extract flame coordinates from G-field
-  [ C2 ] = extract_IsoLine( schemeData.grid, data ,0);
-  [C2,~]= interp2Dcurve_2equidistantGrid([C2(1,2:end);C2(2,2:end)] ,150);
+  [ C2 ] = extract_IsoLine_FPB( schemeData.grid, data ,0);
+  [C2,~]= interp2Dcurve_2equidistantGrid_FPB([C2(1,2:end);C2(2,2:end)] ,150);
   C2 = transpose(C2);
   Flame.coor{1, 1} =C2(:,1:end);
   

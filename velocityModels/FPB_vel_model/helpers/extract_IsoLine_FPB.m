@@ -1,4 +1,4 @@
-function [ C ] = extract_IsoLine( grid, data , level)
+function [ C ] = extract_IsoLine_FPB( grid, data , level)
 %EXTRACTISOLINE Function extracts iso line from given 2D G-field
 %
 % Input:

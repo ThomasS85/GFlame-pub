@@ -2,18 +2,13 @@ function [  schemeData   ] = initialize_FPB(time,data, schemeData )
 %INITIALIZE_FPB initializes the velocity field parameters for velocityFieldFirstPrincipleBased
 %
 % Inputs:
-%
-%
 %   - data        - G-Field matrix
 %
 %   - schemeData  - Struct which contains information about all nescessary
 %                   parameters
 %
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                                %
 %  by Axel Zimmermann (07.2018)  %
-%                                %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -91,10 +86,10 @@ end
 %source POSITION  %
 %%%%%%%%%%%%%%%%%%%
 % extract SOURCE position
-[ C ] = extract_IsoLine( schemeData.grid, data ,velPar.sourceDat.radius_s);
+[ C ] = extract_IsoLine_FPB( schemeData.grid, data ,velPar.sourceDat.radius_s);
 
 % interpolate position of sources to an equidistant distance
-[velPar.sourceDat.x,~]= interp2Dcurve_2equidistantGrid([C(1,2:end);C(2,2:end)] ,velPar.sourceDat.amount);
+[velPar.sourceDat.x,~]= interp2Dcurve_2equidistantGrid_FPB([C(1,2:end);C(2,2:end)] ,velPar.sourceDat.amount);
 velPar.sourceDat.x = transpose(velPar.sourceDat.x(:,1)+ 1i*velPar.sourceDat.x(:,2));
 
 %map source coordinates to image domain
@@ -127,8 +122,8 @@ velPar.u_p=0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if strcmp(schemeData.FPB.do_proceed,'y')
   % extract flame coordinates from G-field
-  [ C2 ] = extract_IsoLine( schemeData.grid, data ,0);
-  [C2,~]= interp2Dcurve_2equidistantGrid([C2(1,2:end);C2(2,2:end)] ,150);
+  [ C2 ] = extract_IsoLine_FPB( schemeData.grid, data ,0);
+  [C2,~]= interp2Dcurve_2equidistantGrid_FPB([C2(1,2:end);C2(2,2:end)] ,150);
   C2 = transpose(C2);
   Flame.coor{1, 1} =C2(:,1:end);
   
@@ -174,7 +169,7 @@ if strcmp(schemeData.FPB.shear_layer,'do_sl') && strcmpi(schemeData.p.CombType,'
   velPar.vortDat.x = SCmap_SCFT( velPar.vortDat.xi , schemeData.p , 'L1' );
   
   % now interpolate the vortex location in the physical domain
-  [velPar.vortDat.x,~]= interp2Dcurve_2equidistantGrid([real(velPar.vortDat.x);imag(velPar.vortDat.x)] ,100);
+  [velPar.vortDat.x,~]= interp2Dcurve_2equidistantGrid_FPB([real(velPar.vortDat.x);imag(velPar.vortDat.x)] ,100);
   velPar.vortDat.x = transpose(velPar.vortDat.x(:,1)+ 1i*velPar.vortDat.x(:,2));
   
   % now map vortex position in the image domain once again

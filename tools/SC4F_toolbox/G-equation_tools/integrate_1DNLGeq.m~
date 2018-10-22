@@ -1,0 +1,459 @@
+function [ Xi_mat , t_out , Qs_Qm , t_Q , u_ref ] = integrate_1DNLGeq( xi_0 , t_max , p , varargin )
+%INTEGRATE_1DNLGEQ Solves 1D non-linear G-equation using flame coordinates (xi)
+%
+% Inputs:
+%   - xi_0    : Initial distribution of xi over x1F (uniform spacing)
+%   - t_max   : G-eq is integrated from t=0 to t_max
+%
+%   - p       : Struct with flame settings as returned from setUpPredefinedFlame()
+%
+% Outputs:
+%   - Xi_mat  : Solution xi at times t_out: ( Rows , Columns ) -> ( t , x1F )
+%   - t_out   : Output times
+%   - Qs_Qm   : Normalized linear heat release fluctuation
+%   - t_Q     : Time steps solver
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% by Thomas Steinbacher Sep 2018
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Parse varargin
+integrate_1DNLGeq_parse_varargin
+
+
+%% Set up flow field
+% Get mapping infos
+[ myMap ] = return_SCmap_SCFT( p );
+
+% Now compute time dependent bulk velocity perturbation signal (output is real)
+mySigNorm = max(abs(excSig(:,2)));
+if mySigNorm<1e-3; mySigNorm=1; end;
+u_s_ref = @(t) ( 1 + myAmp * interp1(excSig(:,1),excSig(:,2),t) / mySigNorm ) * p.u_1_bulkFeed;
+% Place potential source at xi=0.
+vel.sourceDat.G = u_s_ref(0)*p.R_i;
+vel.sourceDat.x = -inf;
+vel.sourceDat.xi = 0;
+% Initialize vel
+vel.vortDat = [];
+vel.u_p = 0;
+vel.doMirror = 'doMirror';
+
+if strcmpi(p.CombType,'backwardFacingStep')
+  % Enable Kutta condition
+  vel.Kutta.H = 1;
+  vel.Kutta.active = 1;
+  doKutta = 'doKutta';
+else
+  % Disable Kutta condition
+  doKutta = 'noKutta';
+end
+
+
+%% Set up G-equation
+% Compute flame parallel mean velocity
+u_p = myMean.u_parallel;
+
+% Compute time step width
+if ~doDiff
+  % (A) No diffusion!
+  % Compute time spacing in order to get desired CFL number
+  if max(u_p)>1e-4
+    % Advection
+    dt = CFL * dx1F / max(u_p);
+    doAdvection = 1;
+  else
+    % No advection
+    dt = 5e-4;
+    doAdvection = 0;
+  end
+else
+  % (B) With diffusion!
+  % set desired mesh Fourier-number MFN,
+  %    see https://hplgit.github.io/fdm-book/doc/pub/diffu/pdf/diffu-4print.pdf
+  %    or http://hplgit.github.io/num-methods-for-PDEs/doc/pub/diffu/html/._diffu001.html#diffu:pde1:FE
+  %  -> Should be <0.5 to be stable
+  %  -> Should be <0.25 for discontinous initial solutions
+  MFN = 0.05;
+  dt_diff = MFN * dx1F^2 / (my_lM*p.s_l_u);
+  if max(u_p)>1e-4
+    % Advection + Diffusion
+    dt_ad = CFL * dx1F / max(u_p);
+    dt = min(dt_diff,dt_ad);
+    doAdvection = 1;
+  else
+    % No advection, only diffusion
+    dt = dt_diff;
+    doAdvection = 0;
+  end
+end
+
+% Compute interval for writing out solution
+n_t = ceil(t_max / dt) + 1; % number of time steps
+if doReturnAll
+  nth_out = 1;
+else
+  nth_out = ceil( n_t / nOut );
+end
+
+
+%% Prepare inputs
+% Make sure xi_0 and x1F are line vectors
+[z,s] = size(xi_0);
+if z>s; xi_0 = xi_0.'; end;
+[z,s] = size(x1F);
+if z>s; x1F = x1F.';u_p = u_p.'; end;
+
+% Initial condition
+% Map flame coordinates to L1 coordinate system
+% x1L_flame = x1F*cos(p.alpha) + 1i*(p.R_flame-x1F*sin(p.alpha));
+x1L_flame = myMean.flcoord(1,:) + 1i*myMean.flcoord(2,:);
+% Now map points to image domain
+xi_flame = myMap.xi_x_L1( x1L_flame );
+
+% Compute normal/ tangential vector to mean flame front
+[ myN ] = comNorm2FlameFront( myMean.flcoord , x1F );
+
+
+%% Prepare gas expansion modeling
+if FFF.do_I && ~isfield(myMean,'vel')
+  % With gas expansion!
+  % Evaluate mean flame front dilatation effects -> Interprete xi_0 at t=0 as mean
+  myC_L1 = x1L_flame+xi_0 .* myN;   % Flame contour
+  [ myC_L1 ] = checkNcorrectLine_geometry( myC_L1 , p );
+  myM = ( FFF.myE - 1 ) * p.s_l_u;  % Source strength
+  myR0 = FFF.myDK_I;                % Source radii
+  if strcmpi(FFF.method_I,'source')
+    [ myMean.vel ] = distributeSources( [real(myC_L1);imag(myC_L1)] , myM , myR0 , FFF.SPpMM , vel , myMap , 'source' );
+  else
+    [ myMean.vel ] = distributePanels( [real(myC_L1),imag(myC_L1)] , myM , FFF.SPpMM , vel , myMap , 'source' );
+  end
+elseif ~isfield(myMean,'vel')
+  % No gas expansion!
+  % If no mean velocity field is specified assume vel at t=0 is mean
+  myMean.vel = vel;
+end
+% assume constant flame speed
+s_L_flame = ones(size(x1L_flame)) * p.s_l_u;
+% Mean heat release
+[ Q_int_mean ] = Q_exact( x1L_flame , s_L_flame , p );
+
+% Evaluate flame normal mean velocity field at mean flame front
+u_n_mean = evalFlowField_physicalDomain( xi_flame , myMean.vel , myMap , doKutta , 1 ,...
+  'xi' , 'L1' , 'noPanel2Point' );
+% project to flame normal direction
+for ii=1:length(u_n_mean)
+  u_n_mean(ii) =  imag2vec( u_n_mean(ii) ) * imag2vec( myN(ii) ).';
+end
+
+
+%% If visualization is desired map all points of interest
+% if ~strcmp(p.flameType,'flat')
+%   x1_refL = p.H_flame;
+% else
+%   x1_refL = p.R_i*1;
+% end
+
+if doPlot
+  [ Xi_all , X_up_mesh , X_down_mesh ] = make_grid4plot( p );  
+end
+
+
+%% Discretize spatial derivative operators
+% (A) 1st derivative xi: first order upwind (advection term)
+if doAdvection
+  % Matrix
+  D_Dx1F = zeros(length(x1F));
+  for ii = 2 : length(x1F)
+    D_Dx1F(ii,ii-1:ii) = [-1 1];
+  end
+  D_Dx1F = D_Dx1F / dx1F;
+  
+  % Use sparse matrix
+  D_Dx1F = sparse(D_Dx1F);
+else
+  D_Dx1F = zeros(length(x1F));
+end
+
+
+% (B) 2nd derivative: second order central difference ( diffusion term)
+if doDiff
+  % Matrix
+  DD_Dx1F2 = zeros(length(x1F));
+  for ii = 2 : length(x1F)-1
+    DD_Dx1F2(ii,ii-1:ii+1) = [1 -2 1];
+  end
+  % Boundaries
+  % (1.1) Dirichlet at base: x_1F=0 -> fixed anchoring
+  %         >  leave zeros in first line   <
+  
+  % (1.2) Zero flux at base: x_1F=0
+  DD_Dx1F2(1,1:3) = [-2 2 0];
+  
+  % (2) Zero flux at tip: x_1F=L_f
+  DD_Dx1F2(end,end-2:end) = [0 2 -2];
+  DD_Dx1F2 = DD_Dx1F2 / (dx1F^2);
+  
+  % Use sparse matrix
+  DD_Dx1F2 = sparse(DD_Dx1F2);
+end
+
+
+
+%% Integrate in time
+% Init
+tt_out = 1;
+tt = 1;
+Qs_Qm = zeros(n_t,1);
+t_out = zeros(nOut,1);
+t_Q = zeros(n_t,1);
+u_ref = zeros(n_t,1);
+Xi_mat = zeros(nOut,length(xi_0));
+Xi_mat(1,:) = xi_0;
+xi_now = xi_0.';
+t_now = 0;
+ind_sources = [];
+
+% Update new flame position with initial xi
+x1L_flame_s = x1L_flame + xi_now.' .* myN;
+% get new flame normal vector of displaced flame front
+myN_s = comNorm2FlameFront( [real(x1L_flame_s) ; imag(x1L_flame_s)] , x1F );
+% Map current flame position to image domain
+xi_flame = myMap.xi_x_L1( x1L_flame_s );
+% Initial curvature contribution
+curvContri = my_lM*p.s_l_u*DD_Dx1F2*xi_now; % Curvature related contribution
+% Initial flame speed disrtribution
+if doDiff && curvContri_sL
+    % Consider Diffusion
+    s_L_flame_s = s_L_flame + curvContri.';
+  else
+    % No Diffusion
+    s_L_flame_s = s_L_flame;
+end
+  
+% Init plot if desired
+if doPlot
+  % Include gas expansion
+  if FFF.do_I
+    % Add sources
+    myM = ( FFF.myE - 1 ) * s_L_flame_s;  % Source strength
+    myR0 = FFF.myDK_I;                % Source radii
+    myC_L1 = x1L_flame + (xi_now.') .* myN + FFF.dispXi*ones(1,length(x1F)) .* myN_s;   % Source contour
+    [ myC_L1 ] = checkNcorrectLine_geometry( myC_L1 , p );
+    if strcmpi(FFF.method_I,'source')
+      [ vel , ind_sources ] = distributeSources( [real(myC_L1);imag(myC_L1)] , myM , myR0 , FFF.SPpMM , vel , myMap , 'source' );
+    else
+      [ vel ] = distributePanels( [real(myC_L1);imag(myC_L1)] , myM , FFF.SPpMM , vel , myMap , 'source' , 'write2' , 1 );
+    end
+    
+  end
+  
+  % Evaluate and visualize velocity field
+  [ myF , plts ] = draw_FlowField( X_up_mesh , X_down_mesh , vel , x1L_flame_s , p , 'meanF' , x1L_flame ,...
+    plotSources , ind_sources,'Xi',Xi_all,'plotField','u1','noQuiver',0.005,'doStreamLines',10);
+  
+  %   % Plot shear layer if solenoidal velocity model
+  %   % Dummy plot
+  %   pV = plot(nan , nan,'bo');
+  %   pKutta = plot(nan , nan,'r.-');
+  
+  if doGif
+    drawnow
+    frame = getframe(myF);
+    im = frame2im(frame);
+    [imind,cm] = rgb2ind(im,256);
+    imwrite(imind,cm,filename4gif,'gif', 'Loopcount',inf,'DelayTime',0.1);
+  else
+    drawnow
+  end
+end
+
+% Loop
+while t_now<t_max
+  % Check if final time is exceeded
+  if t_now+dt>t_max
+    dt = t_max - t_now;
+  end
+  
+  % Update bulk acoustic forcing + remove all sources (gas expansion)
+  vel.sourceDat.G = u_s_ref(t_now  + dt)*p.R_i;
+  vel.sourceDat.x = -inf;
+  vel.sourceDat.xi = 0;
+  vel.sourceDat.r0 = 0;
+  
+  % Include gas expansion
+  if FFF.do_I
+    % remove old sources
+    % Add sources
+    myM = ( FFF.myE - 1 ) * s_L_flame_s;  % Source strength
+    myR0 = FFF.myDK_I;                % Source radii
+    myC_L1 = x1L_flame + (xi_now.') .* myN + FFF.dispXi*ones(1,length(x1F)) .* myN_s;   % Source contour
+    %figure;hold on;plot(myC_L1,'bo-');plot(x1L_flame + (xi_now.') .* myN ,'rx:')
+    [ myC_L1 ] = checkNcorrectLine_geometry( myC_L1 , p );
+    if strcmpi(FFF.method_I,'source')
+      [ vel , ind_sources ] = distributeSources( [real(myC_L1);imag(myC_L1)] , myM , myR0 , FFF.SPpMM , vel , myMap , 'source' );
+    else
+      [ vel ] = distributePanels( [real(myC_L1);imag(myC_L1)] , myM , FFF.SPpMM , vel , myMap , 'source' , 'write2' , 1 );
+    end
+    % Map new flame position to image domain
+  end
+  
+  % Compute flame normal flow field at mean flame position
+  [ u_n_s , vel ] =  evalFlowField_physicalDomain( xi_flame , vel , myMap , doKutta , 1 ,...
+    'KuttaJet' , dt , p.u_1_bulkFeed , 'xi' , 'L1' , 'noPanel2Point');
+  % Project to flame normal direction
+  for ii=1:length(u_n_s)
+    u_n_s(ii) =  imag2vec( u_n_s(ii) ) * imag2vec( myN(ii) ).';
+  end
+  
+  % Substract mean flow velocity
+  u_n_s = u_n_s - u_n_mean;
+  
+  % BC for anchored flames
+  if ~doDiff
+    u_n_s(1) = 0;
+  end
+  
+  % evaluate velocity at reference position
+  [ u_ref(tt+1)  ] =  evalFlowField_physicalDomain( -1e-6+1i*1e-4 , vel , myMap , doKutta , 1 ,...
+    'KuttaJet' , dt , p.u_1_bulkFeed , 'L1' , 'noPanel2Point');
+  
+  % advance xi in time
+  %   xi_next = xi_now + dt * ( u_n_s - u_p .* dydx_WENO05(xi_now,dx1F,u_p) ); % WENO05
+  if doDiff
+    % Include Diffusion
+    curvContri = my_lM*p.s_l_u*DD_Dx1F2*xi_now; % Curvature related contribution
+    xi_next = xi_now + dt * ( u_n_s.' - u_p .* (D_Dx1F*xi_now) + curvContri); % Euler Explicit
+  else
+    % No Diffusion
+    xi_next = xi_now + dt * ( u_n_s.' - u_p .* (D_Dx1F*xi_now) ); % Euler Explicit
+  end
+  if ~doDiff
+    xi_next(1) = 0; % BC for anchored flames
+  end
+  t_next = t_now  + dt;
+  
+  % Update new flame position with new xi
+  x1L_flame_s = x1L_flame + xi_next.' .* myN;
+  % get new flame normal vector of displaced flame front
+  myN_s = comNorm2FlameFront( [real(x1L_flame_s) ; imag(x1L_flame_s)] , x1F );
+  % Map current flame position to image domain
+  xi_flame = myMap.xi_x_L1( x1L_flame_s );
+  
+  % Write out solution
+  if mod(tt,nth_out)==0
+    Xi_mat(tt_out+1,:) = xi_next.';
+    t_out(tt_out+1) = t_next;
+    % Increase counter
+    tt_out = tt_out + 1;
+    
+    % Visualize solution if desired
+    if doPlot
+      % Evaluate and visualize velocity field
+      for ii = 1:length(plts)
+        delete(plts{ii})
+      end
+      [~,plts] = draw_FlowField( X_up_mesh , X_down_mesh , vel , x1L_flame_s , p , 'meanF' , x1L_flame ,...
+        'fig' , myF , plotSources , ind_sources, 'Xi',Xi_all,'plotField','u1','noQuiver',0.005,'doStreamLines',10);
+      
+      %       % Plot Flame displacement
+      %       eta_ref = max(abs(u_s_ref(0:dt:t_now)));
+      %       if eta_ref<1e-7; eta_ref=1; end
+      %       f1 = plot(x1L_flame+xi_next.' .* myN / eta_ref,':','Color','red','LineWidth',2);
+      %       % Plot positions of all vortexes (if solenoidal velocity model)
+      %       % Plot point vortexes
+      %       if ~isempty(vel.vortDat)
+      %         pV = plot(L1_to_L2(vel.vortDat.x,p),'bo');
+      %       end
+      %       % Plot Kutta panel
+      %       if isfield(vel,'Kutta')
+      %         xi_pSL = linspace(1,1+vel.Kutta.H*cos(vel.Kutta.beta),30) + 1i*linspace(0,vel.Kutta.H*sin(vel.Kutta.beta),30);
+      %         x_pSL = myMap.x_xi(xi_pSL);
+      %         pKutta = plot(L1_to_L2(x_pSL,p),'r.-');
+      %       end
+      
+      % Generate Gif
+      if doGif
+        drawnow
+        frame = getframe(myF);
+        im = frame2im(frame);
+        [imind,cm] = rgb2ind(im,256);
+        imwrite(imind,cm,filename4gif,'gif','WriteMode','append','DelayTime',0.1);
+      else
+        drawnow
+      end
+    end
+    
+  end
+  
+  % Compute heat release fluctuation using trapezoidal rule
+  %   % Linear
+  %   if doDiff
+  %     % Consider Diffusion
+  %     Qs_Qm(tt+1) = Q_from_Xi( xi_next ,x1F , p , 'doDiffusion' , curvContri );
+  %   else
+  %     % No Diffusion
+  %     Qs_Qm(tt+1) = Q_from_Xi( xi_next ,x1F , p );
+  %   end
+  
+  % Non-linear
+  if doDiff && curvContri_sL
+    % Consider Diffusion
+    s_L_flame_s = s_L_flame + curvContri.';
+  else
+    % No Diffusion
+    s_L_flame_s = s_L_flame;
+  end
+  [ Q_int ] = Q_exact( x1L_flame_s , s_L_flame_s , p );
+  Qs_Qm(tt+1) = ( Q_int - Q_int_mean ) / Q_int;
+  
+  % Time vector for heat release
+  t_Q(tt+1) = t_next;
+  
+  if max(abs(xi_next))>p.R_i*0.3
+    warning('Instability detected! Simulation aborted.')
+    t_Q(tt+2:end) = [];
+    Qs_Qm(tt+2:end) = [];
+    u_ref(tt+2:end) = [];
+    return
+  end
+  
+  % Update
+  xi_now = xi_next;
+  t_now = t_next;
+  tt = tt + 1;
+  
+end
+
+
+
+end
+
+
+
+%% Function generates vector from imaginary number
+function [vec] = imag2vec(imagNum)
+vec = [ real(imagNum(:)) , imag(imagNum(:)) ];
+end
+
+% %% Function project to normal -> input/ output complex
+% function [displacedLine] = dispNorm2Line(ref_line,N_vec,myDisp)
+% % project2norm(): 
+% %
+% % Inputs: 
+% %     ref_line   - refernce line (comlex vector)
+% %     N_vec      - normal of reference line (complex vector
+% %     myDispVec  - displacement (real vector)
+% %
+% % Output:
+% %     displacedLine  - reference line displaced according to N_vec by distance myDisp
+% %
+% 
+% tmp = zeros(length(ref_line),1);
+% for ii=1:length(ref_line)
+%   tmp(ii) = imag2vec(N_vec) .* myDisp;
+% end
+% 
+% displacedLine = ref_line;
+% 
+% end

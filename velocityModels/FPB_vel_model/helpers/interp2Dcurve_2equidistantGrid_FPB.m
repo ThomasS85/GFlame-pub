@@ -1,4 +1,4 @@
-function [ myCurve_new , fieldData ] = interp2Dcurve_2equidistantGrid( myCurve , nPoints , varargin )
+function [ myCurve_new , fieldData ] = interp2Dcurve_2equidistantGrid_FPB( myCurve , nPoints , varargin )
 %INTERP2DCURVE_2EQUIDISTANTGRID Interpolates a given curve to an equistant grid
 % 
 % Inputs:
@@ -34,8 +34,12 @@ else
   SpeCurve.dsEnd = 0;
 end
 
-% Interpolate curve to equidistant grid
+% Make sure flcoord is line vector
+[z,s] = size(myCurve);
+if z>s; myCurve = myCurve.';doTransp=1;else; doTransp=0; end;
 
+
+%% Interpolate curve to equidistant grid
 % Interpolate to grid specified by user
 myDs = sqrt(sum(diff(myCurve,[],2).^2,1));
 myDs = [0, myDs]; % add starting point
@@ -48,11 +52,22 @@ myCurve_new = interp1(myS, myCurve.', myS_new);
 if ~isempty(myFields)
   fieldData = cell(length(myFields),1);
   for ii=1:length(myFields)
-    fieldData{ii} = interp1(myS, myFields{ii}, myS_new);
+    if length(myFields{ii})==length(myS)
+      fieldData{ii} = interp1(myS, myFields{ii}, myS_new);
+    else
+      % Do not interpolate if length is wrong!
+      fieldData{ii} = myFields{ii};
+    end
   end
   
 else
   fieldData = [];
+end
+
+%% If input was row/column vector, also return same format
+if ~doTransp
+  % Input was column vecor -> tranpose!
+  myCurve_new = myCurve_new.';
 end
 
 end

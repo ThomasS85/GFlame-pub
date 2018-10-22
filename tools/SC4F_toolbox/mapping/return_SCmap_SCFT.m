@@ -12,6 +12,7 @@ function [ s ] = return_SCmap_SCFT( p )
 %% Get appropriate mapping
 if strcmpi(p.CombType,'backwardFacingStep')
   % Backward facing step combustor
+  s.CombType = 'backwardFacingStep';
   % Mapping by Brown/ Churchill fig. 30
   % Define mapping of point B
   s.h = 1 / p.Cr^2;
@@ -53,6 +54,7 @@ if strcmpi(p.CombType,'backwardFacingStep')
   
 elseif strcmpi(p.CombType,'duct')
   % Duct flame
+  s.CombType = 'duct';
   % Mapping by Brown/ Churchill fig. 6
   % reference length to calculate real lengths
   s.l_ref = p.R_i / pi;                        
@@ -60,6 +62,7 @@ elseif strcmpi(p.CombType,'duct')
   s.x_xi = @(xi) s.l_ref * log(xi);
   % SC-Mapping (normalized coordinates) x->xi
   s.xi_x = @(x) exp( x / s.l_ref );
+  s.xi_x_L1 = @(x) exp( x / s.l_ref );
   % Derivative of x with respect to xi
   s.dx_dxi = @(xi) s.l_ref ./ xi;
   % Derivative of xi with respect to x

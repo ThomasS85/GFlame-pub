@@ -33,7 +33,7 @@ end
 %% Evaluuate heat release
 if strcmp(p.Fdim,'2D')
   % Slit flames
-  Qs_Qm = ( Xi(end) - Xi(1) ) / (p.L_flame*tan(p.alpha)) + curvContri;
+  Qs_Qm = Xi(end) / (p.L_flame*tan(p.alpha));
   
 elseif strcmp(p.Fdim,'3D')
   % Conical flames

@@ -20,6 +20,7 @@ function [ u_res , vel , dOmega_dxi_Kutta ] = evalFlowField_physicalDomain( myX 
 %                     .H   : Length of the vortex panel (in physical domain)
 %                     .beta: shear layer angle
 %                     .u   : Velocity right at Kutta point
+%    vel.panel      - Struct  containing source/vortex panels
 %    myMap          - Struct with mapping information as returned from return_SCmap_SCFT()
 %
 % outputs:
@@ -121,6 +122,16 @@ if doRouthsCorr
   end
 end
 
+% Remove sources vortexes/ panels outside the flow domain
+% if ~isempty(vel.vortDat)
+% end
+% 
+% if ~isempty(vel.sourceDat)
+% end
+% 
+% if ~isempty(vel.panel)
+% end
+
 
 %% Map points to image domain
 if isXi
@@ -162,6 +173,8 @@ if doKutta
   
   % Evaluate velocity and potential at Kutta point xiKutta
   [ ~ , dOmega_dxi_xiKutta_sum ] = evalFlowField_PointSource( xiKutta , vel , 'myMapping' , myMap );
+  [ ~ , dOmega_dxi_panel ] = evalFlowField_Panels( xiKutta , vel  );
+  dOmega_dxi_xiKutta_sum = dOmega_dxi_xiKutta_sum + dOmega_dxi_panel;
   
   % Angle functions (dOmega_dxi_xiKutta_sum should be real due to no flux BC!)
   % Compute corret velocity in order to evalaute angle
@@ -264,7 +277,8 @@ end
 
 % evaluate!
 [ ~ , dOmega_dxi ] = evalFlowField_PointSource( myXi , vel , 'myMapping' , myMap );
-u_res =  conj( ( dOmega_dxi + dOmega_dxi_Kutta(myXi) ) .* myMap.dxi_dx( myXi ) ) ...
+[ ~ , dOmega_dxi_panel ] = evalFlowField_Panels( myXi , vel  );
+u_res =  conj( ( dOmega_dxi + dOmega_dxi_panel + dOmega_dxi_Kutta(myXi) ) .* myMap.dxi_dx( myXi ) ) ...
   + conj( u_Routh );
 
 if doKutta
@@ -344,7 +358,7 @@ end
 
 
 %% If input was L1, also map output back to L1
-if mapL1L2
+if mapL1L2 && strcmpi(myMap.CombType,'backwardFacingStep')
   u_res = conj(u_res);
 end
 
